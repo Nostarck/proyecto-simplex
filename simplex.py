@@ -64,10 +64,8 @@ class Simplex():
 		table.extend(self.equations)
 
 		while(True):
-			print("enter to next")
-			input()
 			#calculo los pivotes
-			column_pivot = self.get_column_pivot(table, self.method)
+			column_pivot = self.get_column_pivot(table, self.opt)
 			if column_pivot == -1:
 				self.write_file(table, -1, -1, -1)
 				break
@@ -98,9 +96,6 @@ class Simplex():
 			equation[self.n_vars+i] = 1.0;
 			equation[len(equation)-1] = float(split_inequalities[self.n_vars+1])
 
-			print("inequalities")
-			print(len(inequalities))
-			print(i)
 			self.equations[i] = equation
 
 	def create_vb_list(self):
@@ -180,12 +175,12 @@ class Simplex():
 			if X == None:
 				f.write("0, ")
 			else:
-				f.write(str(table[X][len(table[0])-1])+", ")
+				f.write("{:.4f}".format(table[X][len(table[0])-1])+", ")
 		X = self.vb.index("X"+str(self.n_vars-1)) if "X"+str(self.n_vars-1) in self.vb else None
 		if X == None:
 			f.write("0")
 		else:
-			f.write(str(table[X][len(table[0])-1]))
+			f.write("{:.4f}".format(table[X][len(table[0])-1]))
 		f.write(")\n\n")
 		f.close()
 
@@ -193,7 +188,7 @@ class Simplex():
 		#hacer conversiones de las inecuaciones
 		self.to_equations_2phases(self.equations)
 
-		#convertir la funcion objetivo
+		#convertir la funcion objetivo a S0 + ... SN + (-A0)+...(-A1)
 		U_vars = [0.0] * (self.n_vars + self.n_restrictions*2 + 1)
 		for i in self.artificial_vars:
 			U_vars[i] = 1
@@ -205,16 +200,14 @@ class Simplex():
 			vb_list.append("X"+str(i))
 		for i in self.artificial_vars:
 			vb_list.append("X"+str(i))
-		print(vb_list)
+
 		self.vb = vb_list
 
 		#hacer la primer tabla
 		table = [U_vars]
 		table.extend(self.equations)
-		for t in table:
-			print(t)
 
-		#ajustar la matriz 
+		#ajusto la tabla para poder empezar con el metodo simplex 
 		for i in range(0, len(self.artificial_vars)):
 			for j in range(0,len(table[0])):
 				table[0][j] -= table[len(self.slack_vars)+1+i][j]
@@ -222,38 +215,26 @@ class Simplex():
 		for j in range(0,len(table[0])):
 			table[0][j] *= -1
 
-		print("tabla ajustada")
-		for t in table:
-			print(t)
 		
 		#PHASE 1
 		while(True):
-			print("enter to next")
-			input()
 
-			column_pivot = self.get_column_pivot(table, self.method)
+			column_pivot = self.get_column_pivot(table, self.opt)
 			if column_pivot == -1:
 				self.write_file(table, -1, -1, -1)
 				break
 
 			row_pivot = self.get_row_pivot(table, column_pivot, len(table[0]))
 			pivot = table[row_pivot][column_pivot]
-
 			self.write_file(table, column_pivot, row_pivot, pivot)
-
 			table, self.vb = self.get_next_table(table, column_pivot, row_pivot, pivot)
 
-			for t in table:
-				print(t)
 
-		#drop artificials
-		print("drops artificial")
+		#dropeo las columnas artificiales
 		aux = table[0:self.n_vars + self.n_restrictions]# + table[self.n_vars + self.n_restrictions*2+1:]
 		table = aux
 		for i in range(0,len(table)):
 			table[i] = table[i][0:self.n_vars + self.n_restrictions] + table[i][self.n_vars + self.n_restrictions*2:]
-		for t in table:
-			print(t)
 
 		#colocar U de nuevo en la primer fila
 		self.U_vars = self.clear_u(self.U_vars)
@@ -261,27 +242,16 @@ class Simplex():
 			table[0][x] = self.U_vars[x]
 
 
-		#ajustar table si hace falta
-
+		#ajustar table si hace falta, tengo que ajustar las VB que esten
+		#en la funcion objetivo
 		for i in range(0,self.n_vars):
 			X = self.vb.index("X"+str(i)) if "X"+str(i) in self.vb else None
-			print(str(X)+"row esta en la picha por X"+str(i))
 			if X is not None:
 				cons = (-1*table[0][i])
 				for j in range(0, len(table[0])):
-					print(str(table[0][j]) + " = "+str(cons) +" * "+str(table[X][j]))
 					table[0][j] += cons * table[X][j]
-		print("luego de ajsute")
-		for t in table:
-			print(t)
 	
 		self.write_file(table, -1, -1, -1)
-
-
-
-
-		#hacer la primer tabla
-		pass
 
 	def to_equations_2phases(self, inequalities):
 		for i in range(0, len(inequalities)):
@@ -302,18 +272,7 @@ class Simplex():
 
 			equation[len(equation)-1] = float(split_inequalities[self.n_vars+1])
 
-			print("inequalities")
-			print(len(inequalities))
-			print(equation)
 			self.equations[i] = equation
-
-	def to_string(self):
-		print(self.method)
-		print(self.opt)
-		print(self.n_vars)
-		print(self.n_restrictions)
-		print(self.U_vars)
-		print(self.equations)
 
 
 simplex = Simplex(sys.argv[1])
