@@ -61,6 +61,8 @@ class Simplex():
 		table.extend(self.equations)
 
 		while(True):
+			print("enter to next")
+			input()
 			#calculo los pivotes
 			column_pivot = self.get_column_pivot(table)
 			if column_pivot == -1:
@@ -90,11 +92,18 @@ class Simplex():
 				equation[j] = float(split_inequalities[j])
 			if(split_inequalities[self.n_vars] == "<="):
 				equation[self.n_vars+i] = 1.0;
-			elif(split_inequalities[self.n_vars] == ">="):
-				equation[self.n_vars+i] = -1.0
+				equation[len(equation)-1] = float(split_inequalities[self.n_vars+1])
+			elif(split_inequalities[self.n_vars] == ">="):#fix this
+				for j in range(0,self.n_vars):
+					equation[j] *= -1.0
+				equation[self.n_vars+i] = 1.0
+				equation[len(equation)-1] = float(split_inequalities[self.n_vars+1])*-1.0
 			else: 
 				equation[self.n_vars+i] = 0.0
-			equation[len(equation)-1] = float(split_inequalities[self.n_vars+1])
+				equation[len(equation)-1] = float(split_inequalities[self.n_vars+1])
+			print("inequalities")
+			print(len(inequalities))
+			print(i)
 			self.equations[i] = equation
 
 	def create_vb_list(self):
@@ -106,7 +115,7 @@ class Simplex():
 	def get_column_pivot(self, table):
 		min_val = INF
 		column = -1
-		for j in range(len(table[0])):
+		for j in range(len(table[0])-1):
 			if(table[0][j] < min_val):
 				min_val = table[0][j]
 				column = j
@@ -117,10 +126,11 @@ class Simplex():
 	def get_row_pivot(self, table, piv):
 		min_val = INF
 		row = -1
-		for i in range(0, len(table)):
-			if(table[i][self.col_dim-1] and table[i][self.col_dim-1]/table[i][piv] < min_val):
-				min_val = table[i][self.col_dim-1]/table[i][piv]
-				row = i
+		for i in range(1, len(table)):
+			if(table[i][self.col_dim-1] >= 0):
+				if(table[i][piv] >0 and table[i][self.col_dim-1]/table[i][piv] < min_val):
+					min_val = table[i][self.col_dim-1]/table[i][piv]
+					row = i
 		return row
 
 	def get_next_table(self, table, column_pivot, row_pivot, pivot):
@@ -157,15 +167,17 @@ class Simplex():
 			f.write("Estado optimo")
 		f.write("\nRespuesta Parcial: U = "+"{:.4f}".format(table[0][self.col_dim-1]))
 		f.write(", (")
-		for i in range(0,self.n_vars):
+		for i in range(0,self.n_vars-1):
 			X = self.vb.index("X"+str(i)) if "X"+str(i) in self.vb else None
 			if X == None:
 				f.write("0, ")
 			else:
 				f.write(str(table[X][self.col_dim-1])+", ")
-		for i in range(1, self.n_restrictions):
-			f.write(str(table[i][self.col_dim-1])+", ")
-		f.write(str(table[self.n_restrictions][self.col_dim-1]))
+		X = self.vb.index("X"+str(self.n_vars-1)) if "X"+str(self.n_vars-1) in self.vb else None
+		if X == None:
+			f.write("0")
+		else:
+			f.write(str(table[X][self.col_dim-1]))
 		f.write(")\n\n")
 		f.close()
 
